@@ -22,6 +22,7 @@
 #include <tuple>
 #include <vector>
 
+template<typename T>
 struct data_obj_t {
 	std::string type;
 	std::ptrdiff_t p;
@@ -38,22 +39,39 @@ struct data_obj_t {
 	std::ptrdiff_t bandOffset;
 	std::ptrdiff_t bandWidth;
 	bool negate;
-	std::vector<mpq_class> data;
+	std::vector<T> data;
 	std::vector<std::ptrdiff_t> rmin;
 }; // data_obj_t
 
-namespace daw::json {
-	template<>
-	struct json_data_contract<mpq_class> {
-		using type = json_class_map<std::string>;
-
-		static inline std::string to_json_data( mpq_class const &value ) {
-			return value.get_str( );
+template<typename T>
+struct MpqFromJSONConverter {
+	T operator( )( std::string_view s ) const {
+		auto v = mpq_class( static_cast<std::string>( s ) );
+		if constexpr( std::is_same_v<T, mpq_class> ) {
+			return v;
+		} else {
+			static_assert( std::is_floating_point_v<T> );
+			return static_cast<T>( v.get_d( ) );
 		}
-	};
+	}
+};
 
-	template<>
-	struct json_data_contract<data_obj_t> {
+template<typename T>
+struct MpqToJSONConverter {
+	std::string operator( )( T const &v ) {
+		if constexpr( std::is_same_v<T, mpq_class> ) {
+			return v.get_str( );
+		} else {
+			static_assert( std::is_floating_point_v<T> );
+			auto m = mpq_class( v );
+			return m.get_str( );
+		}
+	}
+};
+
+namespace daw::json {
+	template<typename T>
+	struct json_data_contract<data_obj_t<T>> {
 		using type = json_member_list<
 		  json_string<"type">, json_number<"p", std::ptrdiff_t>,
 		  json_number<"alpha", std::ptrdiff_t>, json_number<"r", std::ptrdiff_t>,
@@ -65,9 +83,11 @@ namespace daw::json {
 		  json_number<"blockFill", std::ptrdiff_t>,
 		  json_number<"bandOffset", std::ptrdiff_t>,
 		  json_number<"bandWidth", std::ptrdiff_t>, json_bool<"negate">,
-		  json_array<"data", mpq_class>, json_array<"rmin", std::ptrdiff_t>>;
+		  json_array<"data", json_custom<no_name, T, MpqFromJSONConverter<T>,
+		                                 MpqToJSONConverter<T>>>,
+		  json_array<"rmin", std::ptrdiff_t>>;
 
-		static inline auto to_json_data( data_obj_t const &value ) {
+		static inline auto to_json_data( data_obj_t<T> const &value ) {
 			return std::forward_as_tuple(
 			  value.type, value.p, value.alpha, value.r, value.j, value.M, value.N,
 			  value.stride, value.blockOffset, value.blockWidth, value.blockHeight,
@@ -104,7 +124,7 @@ int main( int argc, char **argv ) {
 	  } );
 	assert( pos != json_rng.end( ) );
 
-	data_obj_t needle = from_json<data_obj_t>( *pos );
+	data_obj_t needle = from_json<data_obj_t<double>>( *pos );
 
 	std::string out_str = to_json( needle );
 	puts( out_str.c_str( ) );
