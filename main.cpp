@@ -83,8 +83,9 @@ namespace daw::json {
 		  json_number<"blockFill", std::ptrdiff_t>,
 		  json_number<"bandOffset", std::ptrdiff_t>,
 		  json_number<"bandWidth", std::ptrdiff_t>, json_bool<"negate">,
-		  json_array<"data", json_custom<no_name, T, MpqFromJSONConverter<T>,
-		                                 MpqToJSONConverter<T>>>,
+		  json_array<"data",
+		             json_custom<no_name, T, MpqFromJSONConverter<T>,
+		                         MpqToJSONConverter<T>, CustomJsonTypes::String>>,
 		  json_array<"rmin", std::ptrdiff_t>>;
 
 		static inline auto to_json_data( data_obj_t<T> const &value ) {
