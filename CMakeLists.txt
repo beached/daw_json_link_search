@@ -25,5 +25,5 @@ if (NOT GMP_FOUND) # some systems don't install the .pc :eyeroll:
     add_library(PkgConfig::GMP ALIAS GMP)
 endif (NOT GMP_FOUND)
 
-add_executable(data_stuff main.cpp key.h)
+add_executable(data_stuff main.cpp )
 target_link_libraries( data_stuff daw::json_link PkgConfig::GMP )
